@@ -1,1 +1,45 @@
+name: Build iOS App
 
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Build iOS IPA
+    runs-on: macos-14 # Sử dụng macOS Sonoma chạy Xcode mới nhất
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode Version
+        run: |
+          sudo xcode-select -switch /Applications/Xcode_15.4.app
+          xcodebuild -version
+
+      - name: Build App for Generic iOS Device
+        run: |
+          xcodebuild -project ThreeOneOSFive.xcodeproj \
+            -scheme ThreeOneOSFive \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+
+      - name: Package IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/DerivedData/Build/Products/Release-iphoneos/ThreeOneOSFive.app build/Payload/
+          cd build
+          zip -r ThreeOneOSFive.ipa Payload
+          mkdir -p ../output
+          mv ThreeOneOSFive.ipa ../output/
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThreeOneOSFive-IPA
+          path: output/ThreeOneOSFive.ipa
