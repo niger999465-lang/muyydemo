@@ -2,14 +2,15 @@ name: Build iOS App
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
     name: Build iOS IPA
-    runs-on: macos-14 # Sử dụng macOS Sonoma chạy Xcode mới nhất
+    runs-on: macos-14
 
     steps:
       - name: Checkout Repository
