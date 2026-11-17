@@ -3,8 +3,6 @@ name: Build iOS App
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -16,26 +14,40 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Xcode Version
+      - name: Create Missing Localization Files
         run: |
-          sudo xcode-select -switch /Applications/Xcode.app
-          xcodebuild -version
+          # Tự động tạo đầy đủ các thư mục và tệp Localizable.strings còn thiếu để tránh lỗi build input file
+          mkdir -p ThreeOneOSFive/en.lproj
+          mkdir -p ThreeOneOSFive/zh-Hans.lproj
+          mkdir -p ThreeOneOSFive/vi.lproj
+          
+          touch ThreeOneOSFive/en.lproj/Localizable.strings
+          touch ThreeOneOSFive/zh-Hans.lproj/Localizable.strings
+          touch ThreeOneOSFive/vi.lproj/Localizable.strings
 
       - name: Build App for Generic iOS Device
         run: |
+          # Tự động lấy tên scheme hiện có trong project
+          SCHEME_NAME=$(xcodebuild -list -json | python3 -c "import sys, json; data = json.load(sys.stdin); print(data['project']['schemes'][0])")
+          echo "=> Đang build với Scheme: $SCHEME_NAME"
+
+          # Thực hiện biên dịch
           xcodebuild -project ThreeOneOSFive.xcodeproj \
-            -scheme ThreeOneOSFive \
+            -scheme "$SCHEME_NAME" \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build/DerivedData \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
-      - name: Package IPA
-        run: |
+          # Đóng gói thành tệp .ipa
           mkdir -p build/Payload
-          cp -r build/DerivedData/Build/Products/Release-iphoneos/ThreeOneOSFive.app build/Payload/
+          APP_NAME=$(ls build/DerivedData/Build/Products/Release-iphoneos/ | grep "\.app$" | head -n 1)
+          echo "=> Đã tìm thấy App product: $APP_NAME"
+          
+          cp -r build/DerivedData/Build/Products/Release-iphoneos/"$APP_NAME" build/Payload/
           cd build
           zip -r ThreeOneOSFive.ipa Payload
+          
           mkdir -p ../output
           mv ThreeOneOSFive.ipa ../output/
 
